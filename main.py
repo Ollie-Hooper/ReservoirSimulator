@@ -1,5 +1,6 @@
 import numpy as np
 from scipy.integrate import odeint
+from scipy.optimize import fsolve
 import matplotlib.pyplot as plt
 
 
@@ -50,18 +51,45 @@ class ReservoirModel:
         self.discharge_coefficient = 0.98
         self.V_max = self.volume(self.max_height)
 
-    def height(self, V):
-        h = ((3 * V) / (4 * self.l)) ** (2 / 3)
-        return h
+    def height(self, V=None, w=None):
+        L = self.l
+        m = self.max_height
+        if V is not None:
+            return ((3 * np.sqrt(5) * V) / (20 * L * np.sqrt(m))) ** (2 / 3)
+        elif w is not None:
+            return (w ** 2) / (20 * m)
+
+    def width(self, h):
+        m = self.max_height
+        return 2 * np.sqrt(5 * m * h)
+
+    def cross_sectional_area(self, V=None, h=None):
+        if not h:
+            h = self.height(V=V)
+        m = self.max_height
+        return (4 * np.sqrt(5) * (m * h) ** (3 / 2)) / (3 * m)
 
     def volume(self, h):
-        V = (4 * self.l * h ** (3 / 2)) / 3
-        return V
+        L = self.l
+        A = self.cross_sectional_area(h=h)
+        return L * A
 
-    def surface_area(self, V):
-        h = self.height(V)
-        A = self.l * 2 * np.sqrt(h)
-        return A
+    def surface_area(self, V=None, h=None, w=None):
+        if w is None:
+            if V is not None:
+                w = self.width(self.height(V=V))
+            elif h is not None:
+                w = self.width(h)
+        L = self.l
+        return w * L
+
+    def bed_area(self, V=None, h=None):
+        if h is None:
+            h = self.height(V=V)
+        L = self.l
+        m = self.max_height
+        a = np.sqrt((4 * h + 5 * m) / h)
+        return (L / 4) * (5 * m * np.log((a + 2) / np.abs(a - 2)) + 4 * h * a)
 
     # function that returns dV/dt
     def model(self, V, t):
