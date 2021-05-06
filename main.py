@@ -49,6 +49,7 @@ class ReservoirModel:
         self.pipe_radius = 2
         self.g = 9.8
         self.discharge_coefficient = 0.98
+        self.seepage_coefficient = 0.014
         self.V_max = self.volume(self.max_height)
 
     def height(self, V=None, w=None):
@@ -96,10 +97,11 @@ class ReservoirModel:
         didt = self.input_rate(V)  # input rate
         dodt = self.output_rate(V)  # output rate
         drdt = self.rainfall(t)  # rainfall
+        dsdt = self.seepage(V)  # seepage
         # evaporation
         # seepage
         c = self.residual_volume_rate
-        dVdt = didt - dodt + c + drdt
+        dVdt = didt - dodt + drdt - dsdt + c
         return dVdt
 
     def input_rate(self, V):
@@ -110,7 +112,7 @@ class ReservoirModel:
     def output_rate(self, V):
         pipe_area = np.pi * self.pipe_radius ** 2
 
-        h = self.height(V)
+        h = self.height(V=V)
 
         if self.pipe_height < h:
             exit_velocity = np.sqrt(2 * self.g * (h - self.pipe_height))
@@ -125,6 +127,11 @@ class ReservoirModel:
         years = t / (365.25 * 24 * 60 * 60)
         drdt = self.volume(0.3 * np.cos(2 * np.pi * years) + 0.8)
         return drdt
+
+    def seepage(self, V):
+        h = self.height(V=V)
+        dsdt = (self.seepage_coefficient * self.bed_area(h=h)) / (24 * 60 * 60)
+        return dsdt
 
 
 if __name__ == '__main__':
